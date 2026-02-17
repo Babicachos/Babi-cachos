@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Babi Cachos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+    font-family: Arial;
+    background: #fff4f0;
+    text-align: center;
+    margin: 0;
+}
+
+header {
+    background: #000;
+    color: white;
+    padding: 20px;
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    padding: 10px;
+}
+
+.day {
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.green { background: #b6f5b6; }
+.red { background: #ffb3b3; }
+.disabled { background: #eee; color: #999; cursor: not-allowed; }
+
+select, button {
+    padding: 10px;
+    margin: 10px;
+    width: 90%;
+    max-width: 300px;
+}
+
+button {
+    background: black;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Babi Cachos</h1>
+<p>Agendamento Online</p>
+</header>
+
+<h2>Escolha uma data</h2>
+<div class="calendar" id="calendar"></div>
+
+<div id="horarios"></div>
+
+<script type="module">
+
+// 🔥 FIREBASE CONFIG (SEU)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDeOESZnCIS54Mj4V7MZAPKX2cSosnyByI",
+  authDomain: "babi-cachos.firebaseapp.com",
+  projectId: "babi-cachos",
+  storageBucket: "babi-cachos.firebasestorage.app",
+  messagingSenderId: "499093518481",
+  appId: "1:499093518481:web:24542a3907396df4076730"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const calendar = document.getElementById("calendar");
+const horariosDiv = document.getElementById("horarios");
+
+let hoje = new Date();
+
+function gerarCalendario() {
+    calendar.innerHTML = "";
+    for (let i = 0; i < 30; i++) {
+        let data = new Date();
+        data.setDate(hoje.getDate() + i);
+
+        let diaSemana = data.getDay(); 
+        let dia = document.createElement("div");
+        dia.classList.add("day");
+
+        let dataFormatada = data.toISOString().split("T")[0];
+        dia.innerText = data.getDate() + "/" + (data.getMonth()+1);
+
+        if (diaSemana === 0 || diaSemana === 1) {
+            dia.classList.add("disabled");
+        } else {
+            dia.classList.add("green");
+            dia.onclick = () => mostrarHorarios(dataFormatada);
+        }
+
+        calendar.appendChild(dia);
+    }
+}
+
+async function mostrarHorarios(data) {
+    horariosDiv.innerHTML = "<h3>Horários disponíveis</h3>";
+
+    const q = query(collection(db, "agendamentos"), where("data", "==", data));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.size >= 10) {
+        horariosDiv.innerHTML += "<p style='color:red;'>Dia lotado</p>";
+        return;
+    }
+
+    let hora = 9;
+    let minuto = 0;
+
+    while (hora < 22) {
+        let horario = (hora < 10 ? "0" : "") + hora + ":" + (minuto === 0 ? "00" : "30");
+
+        let btn = document.createElement("button");
+        btn.innerText = horario;
+        btn.onclick = () => agendar(data, horario);
+        horariosDiv.appendChild(btn);
+
+        minuto += 90;
+        hora += Math.floor(minuto / 60);
+        minuto = minuto % 60;
+    }
+}
+
+async function agendar(data, horario) {
+    await addDoc(collection(db, "agendamentos"), {
+        data: data,
+        horario: horario
+    });
+
+    let numero = "5513997133746";
+    let mensagem = `Olá! Quero agendar no Babi Cachos\nData: ${data}\nHorário: ${horario}`;
+
+    window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+}
+
+gerarCalendario();
+
+</script>
+
+</body>
+</html>
